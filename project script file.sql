@@ -367,14 +367,122 @@ select * from inpatient;
 
 -- Find the name and contact details of all doctors working in the cardiology department --
 
+DELIMITER //
 
--- Retrieve the details of all patients who are admitted (status = 'admitted') --
+CREATE PROCEDURE CardiologyDr()
+BEGIN
+    SELECT name, phone_Number
+    FROM doctor 
+    WHERE specialization = 'Cardiologist';
+END //
+
+DELIMITER ;
+
+-- To call the procedure --
+
+CALL CardiologyDr();
+
+
+
 
 
 --  Get the average age of patients in the hospital--
+DELIMITER //
+
+CREATE PROCEDURE GetAveragePatientAge(OUT avg_age DECIMAL(5,2))
+BEGIN
+    -- Calculate the average age of all patients
+    SELECT AVG(age) INTO avg_age FROM patient;
+END //
+
+DELIMITER ;
+
+ -- To call the Procedure
+
+SET @average_age = 0;
+CALL GetAveragePatientAge(@average_age);
+SELECT @average_age AS 'Average Age of Patients';
+
+-- Retrieve the doctors who have attended more than 2 patients--
+
+DELIMITER //
+
+CREATE PROCEDURE GetDoctorsWithMoreThan2Patients()
+BEGIN
+    SELECT d.doctor_id, d.name, COUNT(p.patient_id) AS total_patients
+    FROM doctor d
+    JOIN patient p ON d.doctor_id = p.doctor_id
+    GROUP BY d.doctor_id, d.name
+    HAVING total_patients > 2;
+END //
+
+DELIMITER ;
+-- To call the procedure--
+CALL GetDoctorsWithMoreThan2Patients();
+
+-- To retrieve all patient details based on their admission date.--
+
+DELIMITER //
+CREATE PROCEDURE GetPatientsByAdmissionDate(IN admission_date DATE)
+BEGIN
+    SELECT * FROM inpatient WHERE date_of_admission = admission_date;
+END //
+DELIMITER ;
+
+-- To call the procedure--
+
+CALL GetPatientsByAdmissionDate('2025-02-27');
+
+-- To calculate the total room charges bill of a patient based on their treatments.--
+
+DELIMITER //
+CREATE PROCEDURE CalculatePatientBills(IN patient_id INT, OUT total_bill DECIMAL(10,2))
+BEGIN
+    SELECT SUM(room_charges) INTO total_bill
+    FROM bill
+    WHERE patient_id = patient_id;
+END //
+DELIMITER ;
+
+-- Declare a variable to store the output
+SET @total_bill = 0;
+
+-- Call the procedure with a specific patient_id
+CALL CalculatePatientBills(101, @total_bill);
+
+-- Retrieve the result
+SELECT @total_bill;
 
 
--- Find the number of appointments made for each department. --
+ -- How do you fetch patient details who were admitted in the last 1 month  --
+DELIMITER //
+
+CREATE PROCEDURE GetPatientsByDateRange(IN start_date DATE, IN end_date DATE)
+BEGIN
+    SELECT * FROM inpatient
+    WHERE date_of_admission BETWEEN start_date AND end_date;
+END //
+
+DELIMITER ;
+
+-- To call the procedure --
+CALL GetPatientsByDateRange('2025-03-01', '2025-04-01');
+
+-- To Create View for Patients Who Have Not Been Discharged --
+
+CREATE VIEW Active_Patients AS
+SELECT 
+    p.patient_id, 
+    p.name, 
+    i.date_of_admission, 
+    i.date_of_discharge
+FROM patient p
+JOIN inpatient i ON p.patient_id = i.patient_id
+WHERE i.date_of_discharge IS NULL;
+
+-- To call the view --
+
+SELECT * FROM Active_Patients;
 
 
- -- Get the name of the doctor who has the most number of appointments.--
+
